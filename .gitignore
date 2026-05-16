@@ -1,0 +1,3 @@
+﻿# Lake build artifacts (never commit)
+.lake/
+lake-manifest.json
