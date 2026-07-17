@@ -196,4 +196,55 @@ No content is lost at the structural-skeleton level: statement (d)
 already establishes the bijection; statement (e) is its
 Fintype-instantiated count form. -/
 
+/-! ## A concrete instance — the SIDE formation (2,3,2,0)
+
+Closes the W-11 constructive item (loom, 2026-07-15): the `IDSSystem`
+schema is here *demonstrated at a concrete instance* grounded in the
+actual SIDE formation tuple (n₁,n₂,n₃,n₄) = (2,3,2,0), total 7 — no
+longer an abstract `Fin 4 → Type` with hypothesis-assumed fields.  At
+each stage the mechanism classes and identity elements are the concrete
+finite type `Fin (sideStageCount stage)`, and the identity-assignment is
+the concrete identity bijection, so `distinctness` and `noOrphans` are
+*proved here, not assumed*.  `identity_formation_bijection` then fires on
+a fully concrete system, and the formation total is decidably 7.
+
+(A Trivium-sourced instance — building the per-stage maps from
+`SIDE-trivium`'s `trivium_theorem` `MechanismClass ≃ QuadraticDiscriminant`
+— would additionally tie the instance to the seven quadratic
+discriminants, at the cost of a cross-kernel Mathlib dependency edge;
+that is left as an option, the federation convention preferring this
+standalone vanilla instance.) -/
+
+/-- Per-stage class count for the SIDE formation (2,3,2,0): primitive 2,
+transformation 3, output 2, interface 0. -/
+def sideStageCount (stage : Fin 4) : Nat :=
+  match stage.val with
+  | 0 => 2
+  | 1 => 3
+  | 2 => 2
+  | _ => 0
+
+/-- The concrete SIDE IDS-amenable system: at each stage the mechanism
+classes and identity elements are `Fin (sideStageCount stage)`, and the
+identity-assignment is the concrete identity bijection. -/
+def sideIDS : IDSSystem where
+  formation := ⟨2, 3, 2, 0⟩
+  MechClass := fun stage => Fin (sideStageCount stage)
+  IdentElem := fun stage => Fin (sideStageCount stage)
+  identityOf := fun _ x => x
+  distinctness := fun _ _ _ h => h
+  noOrphans := fun _ b => ⟨b, rfl⟩
+
+/-- **The schema, demonstrated at the concrete instance.** The formerly
+abstract `identity_formation_bijection` now fires on a fully concrete,
+never-vacuous system. -/
+theorem sideIDS_bijection :
+    ∀ stage : Fin 4, Bijective (sideIDS.identityOf stage) :=
+  identity_formation_bijection sideIDS
+
+/-- The concrete instance carries the seven: its formation total is
+2 + 3 + 2 + 0 = 7 — statement (e) at this instance, decidable in vanilla
+Lean, no Fintype needed. -/
+theorem sideIDS_total_seven : sideIDS.formation.total = 7 := rfl
+
 end SIDEBijection
