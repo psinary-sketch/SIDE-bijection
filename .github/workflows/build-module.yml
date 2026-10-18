@@ -1,0 +1,101 @@
+# build-module -- a hand-dispatched build of one ref, under (R292)(5) (b682), in the form of (R263)(4).
+# The kernel's dependency form: Mathlib-free (lakefile.lean requires nothing), so SIDE-silence-principle's form of b678 is carried (SIDE-trivium's
+# of b676 with its cache step removed). Inputs: the ref to build and the lake target (the modules, space-separated). Steps: checkout
+# at the ref; elan from its official install script, the toolchain pinned by lean-toolchain; a free-memory logger beside the build that
+# stops lake if free memory falls beneath the 2,560 MB hold; lake build of the target; a scratch file through lake env lean carrying
+# #print axioms for every named terminal; the build log, the memory log and the axioms output uploaded as the run's artifact. No secret is
+# used; the platform's own token alone (read-only contents).
+# The named terminals are read from print_targets.txt at the kernel's root, one name per line, and the scratch file imports each module of
+# the target; no workflow edit is needed to print a new theorem.
+name: build-module
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "the commit SHA or branch to build"
+        required: true
+      target:
+        description: "the lake target to build"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      HOLD_MB: "2560"
+      TARGET: ${{ inputs.target }}
+    steps:
+      - name: Checkout at the ref
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Refuse a target outside the lake grammar
+        run: |
+          case "$TARGET" in
+            *[!A-Za-z0-9_.\ ]*|"") echo "target refused: $TARGET"; exit 2 ;;
+          esac
+          mkdir -p out
+          git rev-parse HEAD > out/ref.txt
+          cat lean-toolchain >> out/ref.txt
+
+      - name: Install elan (official script; the toolchain from lean-toolchain)
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -o elan-init.sh
+          sh elan-init.sh -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+
+      - name: Build under the hold
+        run: |
+          (
+            while true; do
+              avail=$(awk '/MemAvailable/ {print int($2/1024)}' /proc/meminfo)
+              echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) avail_mb=$avail" >> out/mem.log
+              if [ "$avail" -lt "$HOLD_MB" ]; then
+                echo "STOP $(date -u +%Y-%m-%dT%H:%M:%SZ) avail_mb=$avail beneath the hold $HOLD_MB" >> out/mem.log
+                pkill -f lake || true
+                pkill -f lean || true
+              fi
+              sleep 5
+            done
+          ) &
+          LOGGER=$!
+          set +e
+          lake build $TARGET > out/build.log 2>&1
+          echo "$?" > out/build_exit.txt
+          kill "$LOGGER" || true
+          awk -F'avail_mb=' '/avail_mb=/ {split($2,a," "); if (min=="" || a[1]+0<min) min=a[1]+0} END {print "LOW " min}' out/mem.log >> out/mem.log
+          exit 0
+
+      - name: Axioms of the named terminals
+        if: always()
+        run: |
+          : > out/Axioms.lean
+          for m in $TARGET; do echo "import $m" >> out/Axioms.lean; done
+          cp print_targets.txt out/print_targets.txt
+          while IFS= read -r n || [ -n "$n" ]; do
+            n=$(printf '%s' "$n" | tr -d '\r' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+            [ -z "$n" ] && continue
+            case "$n" in
+              *[!A-Za-z0-9_.\']*) echo "print target refused: $n" >> out/axioms_refused.txt; continue ;;
+            esac
+            echo "#print axioms $n" >> out/Axioms.lean
+          done < print_targets.txt
+          if [ "$(cat out/build_exit.txt)" = "0" ] && ! grep -q '^STOP ' out/mem.log; then
+            lake env lean out/Axioms.lean > out/axioms.txt 2>&1 || true
+          else
+            echo "NOT RUN: the build did not complete under the hold" > out/axioms.txt
+          fi
+
+      - name: Upload the run's artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-module-${{ github.run_id }}
+          path: out/
+          if-no-files-found: error
