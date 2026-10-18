@@ -1,0 +1,15 @@
+SIDEBijection.Injective
+SIDEBijection.Surjective
+SIDEBijection.Bijective
+SIDEBijection.Formation
+SIDEBijection.Formation.total
+SIDEBijection.IDSSystem
+SIDEBijection.identity_formation_bijection
+SIDEBijection.statement_a_existence_uniqueness
+SIDEBijection.statement_b_distinctness
+SIDEBijection.statement_c_no_orphans
+SIDEBijection.statement_d_bijection
+SIDEBijection.sideStageCount
+SIDEBijection.sideIDS
+SIDEBijection.sideIDS_bijection
+SIDEBijection.sideIDS_total_seven
