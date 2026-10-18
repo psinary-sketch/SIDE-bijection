@@ -34,11 +34,12 @@ For any IDS-amenable system X with formation (n₁, n₂, n₃, n₄):
 
 ## What this file establishes
 
-Statements (a)-(d) are formalized and proved at vanilla Lean 4 level.
-Statement (e) — the cardinality equality — requires Fintype machinery
-that lives in Mathlib; it is named here as a corollary that follows
-when Fintype is available, and is parked for the Mathlib-enabled
-extension.
+Statement (a) is encoded by `identityOf` being a function; statements
+(b) and (c) are assumed as the `IDSSystem` fields `distinctness` and
+`noOrphans`, and (d) is proved as their conjunction, at vanilla Lean 4
+level.  Statement (e) is not stated in this file (only the instance
+total 2 + 3 + 2 + 0 = 7 at `sideIDS`); the cardinality equality would
+need Fintype machinery from Mathlib.
 
 ## Canonical citation
 
@@ -127,10 +128,12 @@ structure IDSSystem where
 
 /-! ## The bijection theorem -/
 
-/-- **The Identity-Formation Bijection (statement (d)).**
+/-- **The Identity-Formation Bijection (statement (d)), hypothesis-assumed.**
 
-For any IDS-amenable system, the identity-assignment is a bijection at
-each formation stage. -/
+For any `IDSSystem`, whose fields assume the per-stage
+identity-assignment injective (`distinctness`) and surjective
+(`noOrphans`), the assignment is a bijection at each stage — the
+conjunction of those two fields. -/
 theorem identity_formation_bijection (S : IDSSystem) :
     ∀ stage : Fin 4, Bijective (S.identityOf stage) := by
   intro stage
@@ -182,19 +185,12 @@ cardinality of the set of identity elements equals the formation total.
 
 In vanilla Lean 4 without Mathlib, cardinality of a type is not
 directly definable for an arbitrary `Type`; this requires `Fintype`
-instances and counting machinery from Mathlib.  Statement (e) is
-therefore parked here as a named proposition that becomes a theorem
-when Fintype-compatibility is added.
+instances and counting machinery from Mathlib.  Statement (e) is not
+stated in this file (no named proposition carries it).
 
-The structural content of (e) — that the bijection induces a count
-equality — is captured by the fact that `Bijective` is the categorical
-condition for cardinality equality.  When `Fintype` is in scope,
-`Fintype.card_eq_of_bijective` (or its Mathlib name) closes the
-remaining gap automatically.
-
-No content is lost at the structural-skeleton level: statement (d)
-already establishes the bijection; statement (e) is its
-Fintype-instantiated count form. -/
+With `Fintype` in scope it would follow from a per-stage bijection
+(`Fintype.card_eq_of_bijective`, or its Mathlib name), which here is
+the conjunction of the assumed fields `distinctness` and `noOrphans`. -/
 
 /-! ## A concrete instance — the SIDE formation (2,3,2,0)
 
@@ -242,9 +238,8 @@ theorem sideIDS_bijection :
     ∀ stage : Fin 4, Bijective (sideIDS.identityOf stage) :=
   identity_formation_bijection sideIDS
 
-/-- The concrete instance carries the seven: its formation total is
-2 + 3 + 2 + 0 = 7 — statement (e) at this instance, decidable in vanilla
-Lean, no Fintype needed. -/
+/-- The concrete instance's formation total is 2 + 3 + 2 + 0 = 7 (`rfl`);
+the count of its identity elements, statement (e), is not stated. -/
 theorem sideIDS_total_seven : sideIDS.formation.total = 7 := rfl
 
 end SIDEBijection
